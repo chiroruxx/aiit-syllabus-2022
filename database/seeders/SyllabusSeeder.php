@@ -42,10 +42,8 @@ class SyllabusSeeder extends Seeder
         }
 
         $file = new SplFileObject($path);
-        $file->setFlags(SplFileObject::READ_AHEAD | SplFileObject::SKIP_EMPTY);
         while (!$file->eof()) {
             $row = $file->fgetcsv();
-            var_dump($row);
 
             if ($row === false) {
                 throw new RuntimeException("Can not read row at line {$file->getCurrentLine()}");
