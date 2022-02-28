@@ -49,7 +49,7 @@ class SyllabusSeeder extends Seeder
                 throw new RuntimeException("Can not read row at line {$file->getCurrentLine()}");
             }
 
-            if ($row === null || (!isset($row[0]))) {
+            if ($row === null || !isset($row[0])) {
                 continue;
             }
 
