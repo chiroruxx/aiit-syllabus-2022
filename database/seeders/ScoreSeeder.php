@@ -9,6 +9,7 @@ use App\Models\Syllabus;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 use SplFileObject;
 
 class ScoreSeeder extends Seeder
@@ -65,10 +66,14 @@ class ScoreSeeder extends Seeder
         }
 
         $file = new SplFileObject($path);
-        $file->setFlags(SplFileObject::READ_AHEAD | SplFileObject::SKIP_EMPTY | SplFileObject::DROP_NEW_LINE);
         while (!$file->eof()) {
             $row = $file->fgetcsv();
-            if ($row === null) {
+
+            if ($row === false) {
+                throw new RuntimeException("Can not read row at line {$file->fgets()}");
+            }
+
+            if ($row === null || !isset($row[0])) {
                 continue;
             }
 
