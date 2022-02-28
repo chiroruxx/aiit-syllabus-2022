@@ -44,6 +44,7 @@ class SyllabusSeeder extends Seeder
         $file = new SplFileObject($path);
         $file->setFlags(SplFileObject::READ_AHEAD | SplFileObject::SKIP_EMPTY | SplFileObject::DROP_NEW_LINE);
         while (!$file->eof()) {
+            var_dump($file->current());
             $row = $file->fgetcsv();
 
             if ($row === false) {
