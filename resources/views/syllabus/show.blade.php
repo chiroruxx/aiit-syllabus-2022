@@ -119,6 +119,8 @@
                             <span>録画</span>
                         @elseif($lesson->isHighFlex())
                             <span>ハイフレックス</span>
+                        @elseif($lesson->isOther())
+                            <span>ハイフレックス</span>
                         @endif
                     </div>
                 </div>

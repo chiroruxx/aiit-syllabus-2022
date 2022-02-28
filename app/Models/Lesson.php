@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $syllabus_id
  * @property int $number
  * @property string $content
- * @property int $satellite
  * @property int $type
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -24,7 +23,6 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder|Lesson whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Lesson whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Lesson whereNumber($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Lesson whereSatellite($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Lesson whereSyllabusId($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Lesson whereType($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Lesson whereUpdatedAt($value)
@@ -61,6 +59,11 @@ class Lesson extends Model
     public function isHighFlex(): bool
     {
         return $this->getLessonType()->equals(LessonType::HIGH_FLEX());
+    }
+
+    public function isOther(): bool
+    {
+        return $this->getLessonType()->equals(LessonType::OTHER());
     }
 
     public function isExam(): bool
