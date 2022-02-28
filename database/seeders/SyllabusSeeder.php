@@ -7,7 +7,6 @@ namespace Database\Seeders;
 use App\Enums\CompulsoryType;
 use App\Enums\FormDegree;
 use App\Enums\FormType;
-use App\Enums\LessonSatelliteType;
 use App\Enums\LessonType;
 use App\Models\Course;
 use App\Models\Form;
@@ -18,6 +17,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 use SplFileObject;
 
 class SyllabusSeeder extends Seeder
@@ -45,6 +45,11 @@ class SyllabusSeeder extends Seeder
         $file->setFlags(SplFileObject::READ_AHEAD | SplFileObject::SKIP_EMPTY | SplFileObject::DROP_NEW_LINE);
         while (!$file->eof()) {
             $row = $file->fgetcsv();
+
+            if ($row === false) {
+                throw new RuntimeException("Can not read row at line {$file->getCurrentLine()}");
+            }
+
             if ($row === null) {
                 continue;
             }
