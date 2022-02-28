@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\LessonSatelliteType;
 use App\Enums\LessonType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -35,22 +34,14 @@ class Lesson extends Model
 {
     use HasFactory;
 
+    const EXAM_NUMBER = 99;
+
     protected $fillable = [
         'number',
         'content',
         'satellite',
         'type'
     ];
-
-    public function getSatelliteType(): LessonSatelliteType
-    {
-        return new LessonSatelliteType($this->satellite);
-    }
-
-    public function hasSatellite(): bool
-    {
-        return $this->getSatelliteType()->equals(LessonSatelliteType::EXIST());
-    }
 
     public function getLessonType(): LessonType
     {
@@ -59,15 +50,21 @@ class Lesson extends Model
 
     public function isInPersonal(): bool
     {
-        $type = $this->getLessonType();
-
-        return $type->equals(LessonType::IN_PERSON()) || $type->equals(LessonType::BOTH());
+        return $this->getLessonType()->equals(LessonType::IN_PERSON());
     }
 
     public function isVideo(): bool
     {
-        $type = $this->getLessonType();
+        return $this->getLessonType()->equals(LessonType::ON_DEMAND());
+    }
 
-        return $type->equals(LessonType::VIDEO()) || $type->equals(LessonType::BOTH());
+    public function isHighFlex(): bool
+    {
+        return $this->getLessonType()->equals(LessonType::HIGH_FLEX());
+    }
+
+    public function isExam(): bool
+    {
+        return $this->number === self::EXAM_NUMBER;
     }
 }

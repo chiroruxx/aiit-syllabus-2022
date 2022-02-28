@@ -8,19 +8,15 @@ use MyCLabs\Enum\Enum;
 
 class FormType extends Enum
 {
-    public const FORM_TYPE_MIXED = 0;
-    public const FORM_TYPE_BIDIRECTIONAL = 1;
-    public const FORM_TYPE_PERSONAL_WORK = 2;
-    public const FORM_TYPE_GROUP_WORK = 3;
-    public const FORM_TYPE_SATELLITE = 4;
-    public const FORM_TYPE_OTHER = 5;
+    public const FORM_TYPE_IN_PERSON = 0;
+    public const FORM_TYPE_HIGH_FLEX = 1;
+    public const FORM_TYPE_ON_DEMAND = 2;
+    public const FORM_TYPE_OTHER = 3;
 
     private static array $labels = [
-        self::FORM_TYPE_MIXED => '録画・対面混合授業',
-        self::FORM_TYPE_BIDIRECTIONAL => '講義（双方向）',
-        self::FORM_TYPE_PERSONAL_WORK => '実習・演習（個人）',
-        self::FORM_TYPE_GROUP_WORK => '実習・演習（グループ）',
-        self::FORM_TYPE_SATELLITE => 'サテライト開講授業',
+        self::FORM_TYPE_IN_PERSON => '対面',
+        self::FORM_TYPE_HIGH_FLEX => 'ハイフレックス',
+        self::FORM_TYPE_ON_DEMAND => '録画視聴',
         self::FORM_TYPE_OTHER => 'その他',
     ];
 

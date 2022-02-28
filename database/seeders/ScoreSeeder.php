@@ -91,7 +91,7 @@ class ScoreSeeder extends Seeder
                 }
 
                 if (in_array($heading, ['科目名', '科目'], strict: true)) {
-                    $name = $column;
+                    $name = trim($column);
                     continue;
                 }
 
@@ -109,7 +109,12 @@ class ScoreSeeder extends Seeder
                 default => $name,
             };
 
-            $score['name'] = trim($name);
+            // 科目としては存在しているようだが、シラバスの情報が存在しないためスキップする
+            if (in_array($name, ['IT・CIO特論', '標準化と知財戦略', 'システムインテグレーション特論', 'サービス工学特論'], true)) {
+                continue;
+            }
+
+            $score['name'] = $name;
             $scores[] = $score;
         }
         return $scores;

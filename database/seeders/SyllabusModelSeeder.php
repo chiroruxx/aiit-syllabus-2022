@@ -86,7 +86,7 @@ class SyllabusModelSeeder extends Seeder
                 }
 
                 if (in_array($heading, ['科目名', '科目'], strict: true)) {
-                    $name = $column;
+                    $name = trim($column);
                     continue;
                 }
 
@@ -112,15 +112,22 @@ class SyllabusModelSeeder extends Seeder
 
             // 誤植修正
             $name = match ($name) {
-                'DESING[RE]THINKING ' => 'DESIGN［RE］THINKING',
+                'DESING[RE]THINKING', 'ESIGN [RE] THINKING' => 'DESIGN［RE］THINKING',
+                '事業方向性設計演習・' => '事業方向性設計演習',
                 'ビックデータ解析特論' => 'ビッグデータ解析特論',
                 'ET（Embedded Technology）特別演習' => 'ET(Embedded Technology)特別演習',
                 default => $name,
             };
 
-            $syllabusModel['name'] = trim($name);
+            // 科目としては存在しているようだが、シラバスの情報が存在しないためスキップする
+            if (in_array($name, ['IT・CIO 特論', '標準化と知財戦略', 'システムインテグレーション特論', 'サービス工学特論'], true)) {
+                continue;
+            }
+
+            $syllabusModel['name'] = $name;
             $syllabusModels[] = $syllabusModel;
         }
+
         return $syllabusModels;
     }
 

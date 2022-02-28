@@ -55,8 +55,6 @@ class SyllabusSeeder extends Seeder
             }
 
             $syllabus = [];
-            $formCount = 0;
-            $lessonCount = 1;
             foreach ($row as $key => $column) {
                 $heading = $this->getHeading($key);
                 // FIXME match式にする
@@ -94,46 +92,33 @@ class SyllabusSeeder extends Seeder
                     $syllabus['abstract'] = $column;
                 } elseif ($heading === '目的・狙い') {
                     $syllabus['purpose'] = $column;
-                } elseif ($heading === '前提知識（履修条件）') {
+                } elseif ($heading === '履修条件 （履修者数の上限、 要求する前提知識 等）') {
                     $syllabus['precondition'] = $column;
                 } elseif ($heading === '上位到達目標') {
                     $syllabus['higher_goal'] = $column;
                 } elseif ($heading === '下位到達目標') {
                     $syllabus['lower_goal'] = $column;
-                } elseif ($heading === '程度') {
-                    $formKey = $formCount % 6;
-                    $value = match ($column) {
-                        '◎' => FormDegree::OFTEN,
-                        '○' => FormDegree::SOMETIMES,
-                        '―' => FormDegree::NONE,
-                        default => throw new DomainException("Degree {$column} is not defined.")
-                    };
-                    $syllabus['forms'][$formKey] = ['type' => $this->getFormType($formKey), 'degree' => $value];
-                } elseif ($heading === '特徴・留意点') {
-                    $formKey = $formCount % 6;
-                    $syllabus['forms'][$formKey]['feature'] = $column;
-                    $formCount++;
+                } elseif (str_starts_with($heading, '程度')) {
+                    $syllabus['forms'][$this->getFormType($heading)] = ['type' => $this->getFormType($heading), 'degree' => $this->getFormValue($column)];
+                } elseif (str_starts_with($heading, '特徴・留意点')) {
+                    $syllabus['forms'][$this->getFormType($heading)]['feature'] = $column;
                 } elseif ($heading === '授業外の学習') {
                     $syllabus['outside_learning'] = $column;
                 } elseif ($heading === '授業の内容') {
                     $syllabus['inside_learning'] = $column;
-                } elseif ($heading === '内容') {
-                    $syllabus['lessons'][$lessonCount]['number'] = $lessonCount;
-                    $syllabus['lessons'][$lessonCount]['content'] = $column;
-                } elseif ($heading === 'サテライト開講') {
-                    $syllabus['lessons'][$lessonCount]['satellite'] = match ($column) {
-                        '有' => LessonSatelliteType::EXIST,
-                        'ー' => LessonSatelliteType::NONE,
-                        default => throw new DomainException("Satellite {$column} is not defined."),
-                    };
-                } elseif ($heading === '対面録画') {
-                    $syllabus['lessons'][$lessonCount]['type'] = match ($column) {
-                        '対面' => LessonType::IN_PERSON,
-                        '録画（対面無し）' => LessonType::VIDEO,
-                        '録画（対面有り）' => LessonType::BOTH,
+                } elseif (str_starts_with($heading, '内容')) {
+                    $number = $this->getLessonNumber($heading);
+                    $syllabus['lessons'][$number]['number'] = $number;
+                    $syllabus['lessons'][$number]['content'] = $column;
+                } elseif (str_starts_with($heading, '授業実施形態')) {
+                    $number = $this->getLessonNumber($heading);
+                    $syllabus['lessons'][$number]['type'] = match ($column) {
+                        '[対]' => LessonType::IN_PERSON,
+                        '[録]' => LessonType::ON_DEMAND,
+                        '[ハ]' => LessonType::HIGH_FLEX,
+                        'その他' => LessonType::OTHER,
                         default => throw new DomainException("Lesson type {$column} is not defined."),
                     };
-                    $lessonCount++;
                 } elseif ($heading === '成績評価') {
                     $syllabus['evaluation'] = $column;
                 } elseif ($heading === '教科書・教材') {
@@ -176,17 +161,52 @@ class SyllabusSeeder extends Seeder
         return $this->header[$key];
     }
 
-    private function getFormType(int $key): int
+    private function getFormType(string $heading): int
     {
-        static $labels = [
-            FormType::FORM_TYPE_MIXED,
-            FormType::FORM_TYPE_BIDIRECTIONAL,
-            FormType::FORM_TYPE_PERSONAL_WORK,
-            FormType::FORM_TYPE_GROUP_WORK,
-            FormType::FORM_TYPE_SATELLITE,
-            FormType::FORM_TYPE_OTHER,
-        ];
+        $typeStart = strpos($heading, '（');
+        if ($typeStart === false) {
+            throw new DomainException('Can not split form type.');
+        }
 
-        return $labels[$key];
+        $type = substr($heading, $typeStart);
+        return match ($type) {
+            '（対面）' => FormType::FORM_TYPE_IN_PERSON,
+            '（ハイフレックス）' => FormType::FORM_TYPE_HIGH_FLEX,
+            '（オンデマンド）' => FormType::FORM_TYPE_ON_DEMAND,
+            '（その他）' => FormType::FORM_TYPE_OTHER,
+            default => throw new DomainException("Form type '{$heading}' is not found."),
+        };
+    }
+
+    private function getFormValue(string $symbol): int
+    {
+        return match ($symbol) {
+            '◎' => FormDegree::OFTEN,
+            '○' => FormDegree::SOMETIMES,
+            '―' => FormDegree::NONE,
+            default => throw new DomainException("Degree {$symbol} is not defined.")
+        };
+    }
+
+    private function getLessonNumber(string $heading): int
+    {
+        return match (mb_substr($heading, -1)) {
+            '①' => 1,
+            '②' => 2,
+            '③' => 3,
+            '④' => 4,
+            '⑤' => 5,
+            '⑥' => 6,
+            '⑦' => 7,
+            '⑧' => 8,
+            '⑨' => 9,
+            '⑩' => 10,
+            '⑪' => 11,
+            '⑫' => 12,
+            '⑬' => 13,
+            '⑭' => 14,
+            '⑮' => 15,
+            default => 99,
+        };
     }
 }

@@ -106,22 +106,20 @@
             @foreach($syllabus->lessons as $lesson)
                 <div class="flex flex-row w-ful h-32 min-w-full space-x-4 items-center pl-4 pr-4 even:bg-gray-100 hover:bg-gray-200">
                     <div class="flex flex-none w-5">
-                        {{ $lesson->number }}
+                        {{ $lesson->isExam() ? '試験' : $lesson->number }}
                     </div>
                     <div class="flex flex-grow">
                         {{ $lesson->content }}
                     </div>
-                    <div class="flex flex-none w-5">
-                        {{ $lesson->hasSatellite() ? '有' : '無' }}
-                    </div>
-                    <ul class="flex flex-none w-16">
+                    <div class="flex flex-none w-16">
                         @if($lesson->isInPersonal())
-                            <li>対面</li>
+                            <span>対面</span>
+                        @elseif($lesson->isVideo())
+                            <span>録画</span>
+                        @elseif($lesson->isHighFlex())
+                            <span>ハイフレックス</span>
                         @endif
-                        @if($lesson->isVideo())
-                            <li>録画</li>
-                        @endif
-                    </ul>
+                    </div>
                 </div>
             @endforeach
         </div>
