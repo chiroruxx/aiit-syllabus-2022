@@ -1,4 +1,4 @@
-# AIIT Syllabus 2021
+# AIIT Syllabus 2022
 ## 概要
 AIIT のシラバスをweb化して見やすくするプロジェクト。
 

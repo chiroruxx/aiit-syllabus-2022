@@ -13,8 +13,8 @@
 
     <div class="mt-32 mb-12">
         <div class="flex flex-wrap justify-between pt-4 opacity-60">
-            <a class="underline" href="/">AIIT 2021 syllabus</a>
-            <a href="https://github.com/chiroruxx/aiit-syllabus-2021" rel="noopener" target="_blank">
+            <a class="underline" href="/">AIIT 2022 syllabus</a>
+            <a href="https://github.com/chiroruxx/aiit-syllabus-2022" rel="noopener" target="_blank">
                 <img src="/image/github.png" alt="">
             </a>
         </div>

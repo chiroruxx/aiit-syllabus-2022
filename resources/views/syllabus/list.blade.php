@@ -1,5 +1,5 @@
 @extends('layout')
-@section('title', 'AIIT 2021 syllabus')
+@section('title', 'AIIT 2022 syllabus')
 
 @section('content')
     @php
@@ -8,7 +8,7 @@
          */
     @endphp
     <header class="w-full py-16 bg-yellow-300">
-        <h1 class="text-3xl ml-4">AIIT 2021 syllabus</h1>
+        <h1 class="text-3xl ml-4">AIIT 2022 syllabus</h1>
     </header>
 
     <div id="search"></div>
