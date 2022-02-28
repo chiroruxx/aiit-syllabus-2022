@@ -120,7 +120,7 @@
                         @elseif($lesson->isHighFlex())
                             <span>ハイフレックス</span>
                         @elseif($lesson->isOther())
-                            <span>ハイフレックス</span>
+                            <span>その他</span>
                         @endif
                     </div>
                 </div>
