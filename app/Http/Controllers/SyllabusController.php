@@ -51,7 +51,9 @@ class SyllabusController extends Controller
 
     public function show(Syllabus $syllabus): View
     {
-        return view('syllabus.show', compact('syllabus'));
+        $lessons = $syllabus->lessons()->orderBy('number')->get();
+
+        return view('syllabus.show', compact('syllabus', 'lessons'));
     }
 
     private function formatParameters(array $input, string|array $key): array

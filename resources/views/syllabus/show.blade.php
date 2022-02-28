@@ -6,6 +6,7 @@
     @php
         /**
          * @var \App\Models\Syllabus $syllabus
+         * @var \Illuminate\Database\Eloquent\Collection<\App\Models\Lesson> $lessons
          */
 
         $items = [
@@ -103,7 +104,7 @@
             <h3 class="text-2xl">授業の計画</h3>
         </div>
         <div class="flex flex-column flex-wrap pl-4">
-            @foreach($syllabus->lessons as $lesson)
+            @foreach($lessons as $lesson)
                 <div class="flex flex-row w-ful h-32 min-w-full space-x-4 items-center pl-4 pr-4 even:bg-gray-100 hover:bg-gray-200">
                     <div class="flex flex-none w-5">
                         {{ $lesson->isExam() ? '試験' : $lesson->number }}
