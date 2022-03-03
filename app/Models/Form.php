@@ -13,8 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property int $id
  * @property int $syllabus_id
- * @property int $type
- * @property int $degree
+ * @property FormType $type
+ * @property FormDegree $degree
  * @property string $feature
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -40,33 +40,28 @@ class Form extends Model
         'feature',
     ];
 
-    public function getType(): FormType
-    {
-        return FormType::from($this->type);
-    }
+    protected $casts = [
+        'type' => FormType::class,
+        'degree' => FormDegree::class,
+    ];
 
     public function getTypeLabel(): string
     {
-        return FormType::label($this->getType());
-    }
-
-    public function getDegree(): FormDegree
-    {
-        return FormDegree::from($this->degree);
+        return FormType::label($this->type);
     }
 
     public function isDegreeOften(): bool
     {
-        return $this->getDegree() === FormDegree::OFTEN;
+        return $this->degree === FormDegree::OFTEN;
     }
 
     public function isDegreeSometimes(): bool
     {
-        return $this->getDegree() === FormDegree::SOMETIMES;
+        return $this->degree === FormDegree::SOMETIMES;
     }
 
     public function isDegreeNone(): bool
     {
-        return $this->getDegree() === FormDegree::NONE;
+        return $this->degree === FormDegree::NONE;
     }
 }

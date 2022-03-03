@@ -70,9 +70,9 @@ class SyllabusSeeder extends Seeder
                     $syllabus['course'] = $course;
                 } elseif ($heading === '必修・選択') {
                     $value = match ($column) {
-                        '必修' => CompulsoryType::COMPULSORY->value,
-                        '選択' => CompulsoryType::SELECTABLE->value,
-                        '選択必修' => CompulsoryType::SELECTABLE_COMPULSORY->value,
+                        '必修' => CompulsoryType::COMPULSORY,
+                        '選択' => CompulsoryType::SELECTABLE,
+                        '選択必修' => CompulsoryType::SELECTABLE_COMPULSORY,
                         default => throw new DomainException("Compulsory {$column} is not defined."),
                     };
                     $syllabus['compulsory'] = $value;
@@ -103,9 +103,9 @@ class SyllabusSeeder extends Seeder
                 } elseif ($heading === '下位到達目標') {
                     $syllabus['lower_goal'] = $column;
                 } elseif (str_starts_with($heading, '程度')) {
-                    $syllabus['forms'][$this->getFormType($heading)] = ['type' => $this->getFormType($heading), 'degree' => $this->getFormValue($column)];
+                    $syllabus['forms'][$this->getFormType($heading)->value] = ['type' => $this->getFormType($heading), 'degree' => $this->getFormDegree($column)];
                 } elseif (str_starts_with($heading, '特徴・留意点')) {
-                    $syllabus['forms'][$this->getFormType($heading)]['feature'] = $column;
+                    $syllabus['forms'][$this->getFormType($heading)->value]['feature'] = $column;
                 } elseif ($heading === '授業外の学習') {
                     $syllabus['outside_learning'] = $column;
                 } elseif ($heading === '授業の内容') {
@@ -117,10 +117,10 @@ class SyllabusSeeder extends Seeder
                 } elseif (str_starts_with($heading, '授業実施形態')) {
                     $number = $this->getLessonNumber($heading);
                     $syllabus['lessons'][$number]['type'] = match ($column) {
-                        '[対]' => LessonType::IN_PERSON->value,
-                        '[録]' => LessonType::ON_DEMAND->value,
-                        '[ハ]' => LessonType::HIGH_FLEX->value,
-                        'その他' => LessonType::OTHER->value,
+                        '[対]' => LessonType::IN_PERSON,
+                        '[録]' => LessonType::ON_DEMAND,
+                        '[ハ]' => LessonType::HIGH_FLEX,
+                        'その他' => LessonType::OTHER,
                         default => throw new DomainException("Lesson type {$column} is not defined."),
                     };
                 } elseif ($heading === '成績評価') {
@@ -165,7 +165,7 @@ class SyllabusSeeder extends Seeder
         return $this->header[$key];
     }
 
-    private function getFormType(string $heading): int
+    private function getFormType(string $heading): FormType
     {
         $typeStart = strpos($heading, '（');
         if ($typeStart === false) {
@@ -174,20 +174,20 @@ class SyllabusSeeder extends Seeder
 
         $type = substr($heading, $typeStart);
         return match ($type) {
-            '（対面）' => FormType::FORM_TYPE_IN_PERSON->value,
-            '（ハイフレックス）' => FormType::FORM_TYPE_HIGH_FLEX->value,
-            '（オンデマンド）' => FormType::FORM_TYPE_ON_DEMAND->value,
-            '（その他）' => FormType::FORM_TYPE_OTHER->value,
+            '（対面）' => FormType::FORM_TYPE_IN_PERSON,
+            '（ハイフレックス）' => FormType::FORM_TYPE_HIGH_FLEX,
+            '（オンデマンド）' => FormType::FORM_TYPE_ON_DEMAND,
+            '（その他）' => FormType::FORM_TYPE_OTHER,
             default => throw new DomainException("Form type '{$heading}' is not found."),
         };
     }
 
-    private function getFormValue(string $symbol): int
+    private function getFormDegree(string $symbol): FormDegree
     {
         return match ($symbol) {
-            '◎' => FormDegree::OFTEN->value,
-            '○' => FormDegree::SOMETIMES->value,
-            '―' => FormDegree::NONE->value,
+            '◎' => FormDegree::OFTEN,
+            '○' => FormDegree::SOMETIMES,
+            '―' => FormDegree::NONE,
             default => throw new DomainException("Degree {$symbol} is not defined.")
         };
     }
