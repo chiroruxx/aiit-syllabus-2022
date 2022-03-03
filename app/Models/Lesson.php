@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $syllabus_id
  * @property int $number
  * @property string $content
- * @property int $type
+ * @property LessonType $type
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @method static \Illuminate\Database\Eloquent\Builder|Lesson newModelQuery()
@@ -41,29 +41,28 @@ class Lesson extends Model
         'type'
     ];
 
-    public function getLessonType(): LessonType
-    {
-        return new LessonType($this->type);
-    }
+    protected $casts = [
+        'type' => LessonType::class
+    ];
 
     public function isInPersonal(): bool
     {
-        return $this->getLessonType()->equals(LessonType::IN_PERSON());
+        return $this->type === LessonType::IN_PERSON;
     }
 
     public function isVideo(): bool
     {
-        return $this->getLessonType()->equals(LessonType::ON_DEMAND());
+        return $this->type === LessonType::ON_DEMAND;
     }
 
     public function isHighFlex(): bool
     {
-        return $this->getLessonType()->equals(LessonType::HIGH_FLEX());
+        return $this->type === LessonType::HIGH_FLEX;
     }
 
     public function isOther(): bool
     {
-        return $this->getLessonType()->equals(LessonType::OTHER());
+        return $this->type === LessonType::OTHER;
     }
 
     public function isExam(): bool

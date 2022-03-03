@@ -103,9 +103,9 @@ class SyllabusSeeder extends Seeder
                 } elseif ($heading === '下位到達目標') {
                     $syllabus['lower_goal'] = $column;
                 } elseif (str_starts_with($heading, '程度')) {
-                    $syllabus['forms'][$this->getFormType($heading)] = ['type' => $this->getFormType($heading), 'degree' => $this->getFormValue($column)];
+                    $syllabus['forms'][$this->getFormType($heading)->value] = ['type' => $this->getFormType($heading), 'degree' => $this->getFormDegree($column)];
                 } elseif (str_starts_with($heading, '特徴・留意点')) {
-                    $syllabus['forms'][$this->getFormType($heading)]['feature'] = $column;
+                    $syllabus['forms'][$this->getFormType($heading)->value]['feature'] = $column;
                 } elseif ($heading === '授業外の学習') {
                     $syllabus['outside_learning'] = $column;
                 } elseif ($heading === '授業の内容') {
@@ -165,7 +165,7 @@ class SyllabusSeeder extends Seeder
         return $this->header[$key];
     }
 
-    private function getFormType(string $heading): int
+    private function getFormType(string $heading): FormType
     {
         $typeStart = strpos($heading, '（');
         if ($typeStart === false) {
@@ -182,7 +182,7 @@ class SyllabusSeeder extends Seeder
         };
     }
 
-    private function getFormValue(string $symbol): int
+    private function getFormDegree(string $symbol): FormDegree
     {
         return match ($symbol) {
             '◎' => FormDegree::OFTEN,

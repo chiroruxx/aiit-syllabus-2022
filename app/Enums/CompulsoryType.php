@@ -4,22 +4,18 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-use MyCLabs\Enum\Enum;
-
-class CompulsoryType extends Enum
+enum CompulsoryType: int
 {
-    public const COMPULSORY = 0;
-    public const SELECTABLE = 1;
-    public const SELECTABLE_COMPULSORY = 2;
-
-    private static array $labels = [
-        self::COMPULSORY => '必修',
-        self::SELECTABLE => '選択',
-        self::SELECTABLE_COMPULSORY => '選択必修',
-    ];
+    case COMPULSORY = 0;
+    case SELECTABLE = 1;
+    case SELECTABLE_COMPULSORY = 2;
 
     public static function label(self $compulsory): string
     {
-        return self::$labels[$compulsory->getValue()];
+        return match ($compulsory) {
+            self::COMPULSORY => '必修',
+            self::SELECTABLE => '選択',
+            self::SELECTABLE_COMPULSORY => '必修選択',
+        };
     }
 }
