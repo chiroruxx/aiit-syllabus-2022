@@ -28,7 +28,7 @@ class SyllabusModelSeeder extends Seeder
         $syllabusModels = [];
         $csvList = ['ia_models.csv', 'ct_models.csv', 'bd_models.csv'];
         foreach ($csvList as $csv) {
-            $syllabusModels = array_merge($syllabusModels, $this->readCsv("app/seeds/{$csv}"));
+            $syllabusModels = [...$syllabusModels, ...$this->readCsv("app/seeds/{$csv}")];
             $this->setHeader([]);
         }
 

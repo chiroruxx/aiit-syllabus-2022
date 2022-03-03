@@ -27,7 +27,7 @@ class ScoreSeeder extends Seeder
         $scores = [];
         $csvList = ['scores_2020_1.csv','scores_2020_2.csv','scores_2020_3.csv','scores_2020_4.csv'];
         foreach ($csvList as $csv) {
-            $scores = array_merge($scores, $this->readCsv("app/seeds/{$csv}"));
+            $scores = [...$scores, ...$this->readCsv("app/seeds/{$csv}")];
             $this->setHeader([]);
         }
 

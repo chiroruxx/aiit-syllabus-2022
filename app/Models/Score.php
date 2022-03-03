@@ -77,7 +77,7 @@ class Score extends Model
 
         foreach ($attributes as $score => $attribute) {
             $scores = array_fill(0, $this->$attribute, $score);
-            $list = array_merge($list, $scores);
+            $list = [...$list, ...$scores];
         }
 
         return $list;
