@@ -43,27 +43,27 @@ class Lesson extends Model
 
     public function getLessonType(): LessonType
     {
-        return new LessonType($this->type);
+        return LessonType::from($this->type);
     }
 
     public function isInPersonal(): bool
     {
-        return $this->getLessonType()->equals(LessonType::IN_PERSON());
+        return $this->getLessonType() === LessonType::IN_PERSON;
     }
 
     public function isVideo(): bool
     {
-        return $this->getLessonType()->equals(LessonType::ON_DEMAND());
+        return $this->getLessonType() === LessonType::ON_DEMAND;
     }
 
     public function isHighFlex(): bool
     {
-        return $this->getLessonType()->equals(LessonType::HIGH_FLEX());
+        return $this->getLessonType() === LessonType::HIGH_FLEX;
     }
 
     public function isOther(): bool
     {
-        return $this->getLessonType()->equals(LessonType::OTHER());
+        return $this->getLessonType() === LessonType::OTHER;
     }
 
     public function isExam(): bool

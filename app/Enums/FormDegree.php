@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-use MyCLabs\Enum\Enum;
-
-class FormDegree extends Enum
+enum FormDegree: int
 {
-    public const NONE = 0;
-    public const SOMETIMES = 1;
-    public const OFTEN = 2;
+    case NONE = 0;
+    case SOMETIMES = 1;
+    case OFTEN = 2;
 }

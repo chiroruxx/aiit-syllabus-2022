@@ -128,7 +128,7 @@ class Syllabus extends Model
 
     public function getCompulsory(): CompulsoryType
     {
-        return new CompulsoryType($this->compulsory);
+        return CompulsoryType::from($this->compulsory);
     }
 
     public function getCompulsoryLabel(): string

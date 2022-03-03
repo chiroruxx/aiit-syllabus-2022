@@ -70,9 +70,9 @@ class SyllabusSeeder extends Seeder
                     $syllabus['course'] = $course;
                 } elseif ($heading === '必修・選択') {
                     $value = match ($column) {
-                        '必修' => CompulsoryType::COMPULSORY,
-                        '選択' => CompulsoryType::SELECTABLE,
-                        '選択必修' => CompulsoryType::SELECTABLE_COMPULSORY,
+                        '必修' => CompulsoryType::COMPULSORY->value,
+                        '選択' => CompulsoryType::SELECTABLE->value,
+                        '選択必修' => CompulsoryType::SELECTABLE_COMPULSORY->value,
                         default => throw new DomainException("Compulsory {$column} is not defined."),
                     };
                     $syllabus['compulsory'] = $value;
@@ -117,10 +117,10 @@ class SyllabusSeeder extends Seeder
                 } elseif (str_starts_with($heading, '授業実施形態')) {
                     $number = $this->getLessonNumber($heading);
                     $syllabus['lessons'][$number]['type'] = match ($column) {
-                        '[対]' => LessonType::IN_PERSON,
-                        '[録]' => LessonType::ON_DEMAND,
-                        '[ハ]' => LessonType::HIGH_FLEX,
-                        'その他' => LessonType::OTHER,
+                        '[対]' => LessonType::IN_PERSON->value,
+                        '[録]' => LessonType::ON_DEMAND->value,
+                        '[ハ]' => LessonType::HIGH_FLEX->value,
+                        'その他' => LessonType::OTHER->value,
                         default => throw new DomainException("Lesson type {$column} is not defined."),
                     };
                 } elseif ($heading === '成績評価') {
@@ -174,10 +174,10 @@ class SyllabusSeeder extends Seeder
 
         $type = substr($heading, $typeStart);
         return match ($type) {
-            '（対面）' => FormType::FORM_TYPE_IN_PERSON,
-            '（ハイフレックス）' => FormType::FORM_TYPE_HIGH_FLEX,
-            '（オンデマンド）' => FormType::FORM_TYPE_ON_DEMAND,
-            '（その他）' => FormType::FORM_TYPE_OTHER,
+            '（対面）' => FormType::FORM_TYPE_IN_PERSON->value,
+            '（ハイフレックス）' => FormType::FORM_TYPE_HIGH_FLEX->value,
+            '（オンデマンド）' => FormType::FORM_TYPE_ON_DEMAND->value,
+            '（その他）' => FormType::FORM_TYPE_OTHER->value,
             default => throw new DomainException("Form type '{$heading}' is not found."),
         };
     }
@@ -185,9 +185,9 @@ class SyllabusSeeder extends Seeder
     private function getFormValue(string $symbol): int
     {
         return match ($symbol) {
-            '◎' => FormDegree::OFTEN,
-            '○' => FormDegree::SOMETIMES,
-            '―' => FormDegree::NONE,
+            '◎' => FormDegree::OFTEN->value,
+            '○' => FormDegree::SOMETIMES->value,
+            '―' => FormDegree::NONE->value,
             default => throw new DomainException("Degree {$symbol} is not defined.")
         };
     }

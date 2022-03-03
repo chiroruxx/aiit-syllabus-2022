@@ -42,7 +42,7 @@ class Form extends Model
 
     public function getType(): FormType
     {
-        return new FormType($this->type);
+        return FormType::from($this->type);
     }
 
     public function getTypeLabel(): string
@@ -52,21 +52,21 @@ class Form extends Model
 
     public function getDegree(): FormDegree
     {
-        return new FormDegree($this->degree);
+        return FormDegree::from($this->degree);
     }
 
     public function isDegreeOften(): bool
     {
-        return $this->getDegree()->equals(FormDegree::OFTEN());
+        return $this->getDegree() === FormDegree::OFTEN;
     }
 
     public function isDegreeSometimes(): bool
     {
-        return $this->getDegree()->equals(FormDegree::SOMETIMES());
+        return $this->getDegree() === FormDegree::SOMETIMES;
     }
 
     public function isDegreeNone(): bool
     {
-        return $this->getDegree()->equals(FormDegree::NONE());
+        return $this->getDegree() === FormDegree::NONE;
     }
 }
