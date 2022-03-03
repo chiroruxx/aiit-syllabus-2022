@@ -6,16 +6,14 @@ namespace Database\Seeders;
 
 use App\Models\Score;
 use App\Models\Syllabus;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Services\CsvReader;
+use App\Services\CsvRow;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
-use SplFileObject;
 
 class ScoreSeeder extends Seeder
 {
-    private array $header = [];
-
     /**
      * Run the database seeds.
      *
@@ -24,119 +22,101 @@ class ScoreSeeder extends Seeder
      */
     public function run()
     {
+        $syllabi = Syllabus::all(['id', 'name_ja']);
+
         $scores = [];
-        $csvList = ['scores_2020_1.csv','scores_2020_2.csv','scores_2020_3.csv','scores_2020_4.csv'];
+        $csvList = ['scores_2020_1.csv', 'scores_2020_2.csv', 'scores_2020_3.csv', 'scores_2020_4.csv'];
         foreach ($csvList as $csv) {
-            $scores = [...$scores, ...$this->readCsv("app/seeds/{$csv}")];
-            $this->setHeader([]);
+            $scores = [...$scores, ...$this->readCsv("app/seeds/{$csv}", $syllabi)];
         }
 
-        DB::transaction(
-            function () use ($scores) {
-                foreach ($scores as $record) {
-                    /** @var Syllabus $syllabus */
-                    $syllabus = Syllabus::whereNameJa($record['name'])->first();
+        DB::transaction(function () use ($scores): void {
+            foreach ($scores as $record) {
+                /** @var Syllabus $syllabus */
+                $syllabus = $record['syllabus'];
 
-                    if ($syllabus === null) {
-                        throw new ModelNotFoundException("Syllabus {$record['name']} is not found.");
+                $syllabus->load('score');
+                if ($syllabus->score === null) {
+                    $syllabus->score()->save(new Score($record['score']));
+                } else {
+                    $score = $syllabus->score;
+                    foreach ($score->getFillable() as $attribute) {
+                        $score->$attribute += $record['score'][$attribute];
                     }
-                    unset($record['name']);
-
-                    if ($syllabus->score === null) {
-                        $syllabus->score()->save(new Score($record));
-                    } else {
-                        $score = $syllabus->score;
-                        foreach ($score->getFillable() as $attribute) {
-                            $score->$attribute += $record[$attribute];
-                        }
-                        $score->save();
-                    }
+                    $score->save();
                 }
             }
-        );
+        });
     }
 
-    private function readCsv(string $relativePath): array
+    /**
+     * @param string $relativePath
+     * @param Collection<Syllabus> $syllabi
+     * @return array
+     */
+    private function readCsv(string $relativePath, Collection $syllabi): array
     {
         $scores = [];
 
         $path = storage_path($relativePath);
-        if (!file_exists($path)) {
-            echo("Cannot find seed file at '{$path}'");
-        }
 
-        $file = new SplFileObject($path);
-        while (!$file->eof()) {
-            $row = $file->fgetcsv();
+        $reader = new CsvReader($path);
+        $row = $reader->next();
 
-            if ($row === false) {
-                throw new RuntimeException("Can not read row at line {$file->fgets()}");
-            }
+        while ($row !== null) {
+            $syllabus = $this->getSyllabus($row, $syllabi);
 
-            if ($row === null || !isset($row[0])) {
+            if ($syllabus === null) {
+                $row = $reader->next();
                 continue;
             }
 
-            if ($this->hasHeader()) {
-                $this->setHeader($row);
-                continue;
-            }
+            $score = [
+                'syllabus' => $syllabus,
+                'score' => [
+                    'participants' => $row->get('受講者数'),
+                    'score_5' => $row->get('5'),
+                    'score_4' => $row->get('4'),
+                    'score_3' => $row->get('3'),
+                    'score_2' => $row->get('2'),
+                    'score_1' => $row->get('1'),
+                    'score_0' => $row->get('0'),
+                ],
+            ];
 
-            $score = [];
-            $name = '';
-            foreach ($row as $key => $column) {
-                $heading = $this->getHeading($key);
-
-                if ($column === null || $column === '') {
-                    continue;
-                }
-
-                if ($heading === '専攻コース' || $heading === '担当教員') {
-                    continue;
-                }
-
-                if (in_array($heading, ['科目名', '科目'], strict: true)) {
-                    $name = trim($column);
-                    continue;
-                }
-
-                $scoreKey = $heading === '受講者数' ? 'participants' : "score_{$heading}";
-                $score[$scoreKey] = $column;
-            }
-
-            // 誤植修正
-            $name = match ($name) {
-                '会計・ファインナンス工学特論' => '会計・ファイナンス工学特論',
-                'IT・CIO特論コース' => 'IT・CIO特論',
-                '統計・数理軽量ファインナンス特別演習' => '統計・数理計量ファイナンス特別演習',
-                'DESIGN ［RE］ THINKING' => 'DESIGN［RE］THINKING',
-                'ET（Embedded Technology）特別演習' => 'ET(Embedded Technology)特別演習',
-                default => $name,
-            };
-
-            // 科目としては存在しているようだが、シラバスの情報が存在しないためスキップする
-            if (in_array($name, ['IT・CIO特論', '標準化と知財戦略', 'システムインテグレーション特論', 'サービス工学特論'], true)) {
-                continue;
-            }
-
-            $score['name'] = $name;
             $scores[] = $score;
+            $row = $reader->next();
         }
+
         return $scores;
     }
 
-    private function hasHeader(): bool
+    /**
+     * @param CsvRow $row
+     * @param Collection<Syllabus> $syllabi
+     * @return Syllabus|null
+     */
+    private function getSyllabus(CsvRow $row, Collection $syllabi): ?Syllabus
     {
-        return count($this->header) === 0;
-    }
+        $name = $row->get('科目名');
 
-    private function setHeader(array $header): void
-    {
-        $this->header = $header;
-    }
+        // 誤植修正
+        $name = match ($name) {
+            '会計・ファインナンス工学特論' => '会計・ファイナンス工学特論',
+            'IT・CIO特論コース' => 'IT・CIO特論',
+            '統計・数理軽量ファインナンス特別演習' => '統計・数理計量ファイナンス特別演習',
+            'DESIGN ［RE］ THINKING' => 'DESIGN［RE］THINKING',
+            'ET（Embedded Technology）特別演習' => 'ET(Embedded Technology)特別演習',
+            default => $name,
+        };
 
-    private function getHeading(int $key): string
-    {
-        return $this->header[$key];
+        // 科目としては存在しているようだが、シラバスの情報が存在しないためスキップする
+        if (in_array($name, ['IT・CIO特論', '標準化と知財戦略', 'システムインテグレーション特論', 'サービス工学特論'], true)) {
+            return null;
+        }
+
+        return $syllabi
+            ->where('name_ja', $name)
+            ->firstOrFail();
     }
 }

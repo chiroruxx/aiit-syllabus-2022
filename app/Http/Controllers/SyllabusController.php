@@ -32,9 +32,9 @@ class SyllabusController extends Controller
                 'search' => ['array'],
                 'search.courses' => ['array'],
                 'search.courses.*' => [Rule::exists('courses', 'id')],
-                'search.models' => ['array'],
-                'search.models.type' => ['array'],
-                'search.models.*' => [Rule::exists('models', 'id')],
+                'search.model' => ['array'],
+                'search.model.type' => ['array'],
+                'search.model.*' => [Rule::exists('models', 'id')],
                 'search.quarters' => ['array'],
                 'search.quarters.*' => ['integer', 'min:1', 'max:4'],
             ]

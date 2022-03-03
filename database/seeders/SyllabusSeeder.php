@@ -12,23 +12,21 @@ use App\Models\Course;
 use App\Models\Form;
 use App\Models\Lesson;
 use App\Models\Syllabus;
+use App\Services\CsvReader;
+use App\Services\CsvRow;
 use DomainException;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
-use SplFileObject;
+use Throwable;
 
 class SyllabusSeeder extends Seeder
 {
-    private array $header = [];
-
     /**
      * Run the database seeds.
      *
      * @return void
-     * @throws \Throwable When failed transactions.
+     * @throws Throwable When failed transactions.
      */
     public function run()
     {
@@ -41,103 +39,24 @@ class SyllabusSeeder extends Seeder
             echo("Cannot find seed file at '{$path}'");
         }
 
-        $file = new SplFileObject($path);
-        while (!$file->eof()) {
-            $row = $file->fgetcsv();
+        $reader = new CsvReader(storage_path('app/seeds/syllabi.csv'));
 
-            if ($row === false) {
-                throw new RuntimeException("Can not read row at line {$file->getCurrentLine()}");
-            }
+        $row = $reader->next();
 
-            if ($row === null || !isset($row[0])) {
-                continue;
-            }
+        while ($row  !== null) {
+            $syllabi[] = [
+                'syllabus' => $this->getSyllabusAttributes($row),
+                'forms' => $this->getFormsAttributes($row),
+                'lessons' => $this->getLessonsAttributes($row),
+                'course' => $this->getCourse($row, $courses),
+            ];
 
-            if ($this->hasHeader()) {
-                $this->setHeader($row);
-                continue;
-            }
-
-            $syllabus = [];
-            foreach ($row as $key => $column) {
-                $heading = $this->getHeading($key);
-                // FIXME match式にする
-                if ($heading === 'コース名') {
-                    $course = $courses->where('name', '=', $column)->first();
-                    if ($course === null) {
-                        throw new ModelNotFoundException("Course {$column} is not found.");
-                    }
-                    $syllabus['course'] = $course;
-                } elseif ($heading === '必修・選択') {
-                    $value = match ($column) {
-                        '必修' => CompulsoryType::COMPULSORY,
-                        '選択' => CompulsoryType::SELECTABLE,
-                        '選択必修' => CompulsoryType::SELECTABLE_COMPULSORY,
-                        default => throw new DomainException("Compulsory {$column} is not defined."),
-                    };
-                    $syllabus['compulsory'] = $value;
-                } elseif ($heading === '単位数') {
-                    $syllabus['credit'] = (int)$column;
-                } elseif ($heading === '学期') {
-                    $syllabus['quarter'] = (int)substr($column, 0, 1);
-                } elseif ($heading === '科目群') {
-                    $syllabus['group'] = $column;
-                } elseif ($heading === '科目名') {
-                    // 謎のスペースが空いているので取る
-                    if ($column === 'DESIGN ［RE］THINKING') {
-                        $column = str_replace(' ［', '［', $column);
-                    }
-                    $syllabus['name_ja'] = $column;
-                } elseif ($heading === '（英文表記）') {
-                    $syllabus['name_en'] = $column;
-                } elseif ($heading === '教員名') {
-                    $syllabus['teacher'] = $column;
-                } elseif ($heading === '概要') {
-                    $syllabus['abstract'] = $column;
-                } elseif ($heading === '目的・狙い') {
-                    $syllabus['purpose'] = $column;
-                } elseif ($heading === '履修条件 （履修者数の上限、 要求する前提知識 等）') {
-                    $syllabus['precondition'] = $column;
-                } elseif ($heading === '上位到達目標') {
-                    $syllabus['higher_goal'] = $column;
-                } elseif ($heading === '下位到達目標') {
-                    $syllabus['lower_goal'] = $column;
-                } elseif (str_starts_with($heading, '程度')) {
-                    $syllabus['forms'][$this->getFormType($heading)->value] = ['type' => $this->getFormType($heading), 'degree' => $this->getFormDegree($column)];
-                } elseif (str_starts_with($heading, '特徴・留意点')) {
-                    $syllabus['forms'][$this->getFormType($heading)->value]['feature'] = $column;
-                } elseif ($heading === '授業外の学習') {
-                    $syllabus['outside_learning'] = $column;
-                } elseif ($heading === '授業の内容') {
-                    $syllabus['inside_learning'] = $column;
-                } elseif (str_starts_with($heading, '内容')) {
-                    $number = $this->getLessonNumber($heading);
-                    $syllabus['lessons'][$number]['number'] = $number;
-                    $syllabus['lessons'][$number]['content'] = $column;
-                } elseif (str_starts_with($heading, '授業実施形態')) {
-                    $number = $this->getLessonNumber($heading);
-                    $syllabus['lessons'][$number]['type'] = match ($column) {
-                        '[対]' => LessonType::IN_PERSON,
-                        '[録]' => LessonType::ON_DEMAND,
-                        '[ハ]' => LessonType::HIGH_FLEX,
-                        'その他' => LessonType::OTHER,
-                        default => throw new DomainException("Lesson type {$column} is not defined."),
-                    };
-                } elseif ($heading === '成績評価') {
-                    $syllabus['evaluation'] = $column;
-                } elseif ($heading === '教科書・教材') {
-                    $syllabus['text'] = $column;
-                } elseif ($heading === '参考図書') {
-                    $syllabus['reference'] = $column;
-                }
-            }
-
-            $syllabi[] = $syllabus;
+            $row = $reader->next();
         }
 
         DB::transaction(function () use ($syllabi) {
             foreach ($syllabi as $record) {
-                $syllabus = new Syllabus(Arr::except($record, ['forms', 'lessons', 'course']));
+                $syllabus = new Syllabus($record['syllabus']);
                 $syllabus->course()->associate($record['course']);
                 $syllabus->save();
 
@@ -150,36 +69,61 @@ class SyllabusSeeder extends Seeder
         });
     }
 
-    private function hasHeader(): bool
+    private function getSyllabusAttributes(CsvRow $row): array
     {
-        return count($this->header) === 0;
-    }
+        $compulsory = $row->get('必修・選択');
 
-    private function setHeader(array $header): void
-    {
-        $this->header = $header;
-    }
-
-    private function getHeading(int $key): string
-    {
-        return $this->header[$key];
-    }
-
-    private function getFormType(string $heading): FormType
-    {
-        $typeStart = strpos($heading, '（');
-        if ($typeStart === false) {
-            throw new DomainException('Can not split form type.');
+        $name_ja = $row->get('科目名');
+        if ($name_ja === 'DESIGN ［RE］THINKING') {
+            $name_ja = str_replace(' ［', '［', $name_ja);
         }
 
-        $type = substr($heading, $typeStart);
-        return match ($type) {
-            '（対面）' => FormType::FORM_TYPE_IN_PERSON,
-            '（ハイフレックス）' => FormType::FORM_TYPE_HIGH_FLEX,
-            '（オンデマンド）' => FormType::FORM_TYPE_ON_DEMAND,
-            '（その他）' => FormType::FORM_TYPE_OTHER,
-            default => throw new DomainException("Form type '{$heading}' is not found."),
-        };
+        return [
+            'group' => $row->get('科目群'),
+            'name_en' => $row->get('（英文表記）'),
+            'teacher' => $row->get('教員名'),
+            'abstract' => $row->get('概要'),
+            'purpose' => $row->get('目的・狙い'),
+            'precondition' => $row->get('履修条件 （履修者数の上限、 要求する前提知識 等）'),
+            'higher_goal' => $row->get('上位到達目標'),
+            'lower_goal' => $row->get('下位到達目標'),
+            'outside_learning' => $row->get('授業外の学習'),
+            'inside_learning' => $row->get('授業の内容'),
+            'evaluation' => $row->get('成績評価'),
+            'text' => $row->get('教科書・教材'),
+            'reference' => $row->get('参考図書'),
+            'compulsory' => match ($compulsory) {
+                '必修' => CompulsoryType::COMPULSORY,
+                '選択' => CompulsoryType::SELECTABLE,
+                '選択必修' => CompulsoryType::SELECTABLE_COMPULSORY,
+                default => throw new DomainException("Compulsory {$compulsory} is not defined."),
+            },
+            'credit' => (int)$row->get('単位数'),
+            'quarter' => (int)substr($row->get('学期'), 0, 1),
+            'name_ja' => $name_ja,
+        ];
+    }
+
+    private function getFormsAttributes(CsvRow $row): array
+    {
+        $postfixes = [
+            '（対面）' => FormType::FORM_TYPE_IN_PERSON->value,
+            '（ハイフレックス）' => FormType::FORM_TYPE_HIGH_FLEX->value,
+            '（オンデマンド）' => FormType::FORM_TYPE_ON_DEMAND->value,
+            '（その他）' => FormType::FORM_TYPE_OTHER->value,
+        ];
+
+        $attributes = [];
+
+        foreach ($postfixes as $postfix => $typeValue) {
+            $attributes[] = [
+                'type' => FormType::from($typeValue),
+                'degree' => $this->getFormDegree($row->get("程度{$postfix}")),
+                'feature' => $row->get("特徴・留意点{$postfix}")
+            ];
+        }
+
+        return $attributes;
     }
 
     private function getFormDegree(string $symbol): FormDegree
@@ -192,12 +136,12 @@ class SyllabusSeeder extends Seeder
         };
     }
 
-    private function getLessonNumber(string $heading): int
+    private function getLessonsAttributes(CsvRow $row): array
     {
-        return match (mb_substr($heading, -1)) {
+        $numbers = [
             '①' => 1,
             '②' => 2,
-            '③' => 3,
+            '➂' => 3,
             '④' => 4,
             '⑤' => 5,
             '⑥' => 6,
@@ -210,7 +154,31 @@ class SyllabusSeeder extends Seeder
             '⑬' => 13,
             '⑭' => 14,
             '⑮' => 15,
-            default => 99,
-        };
+            '（試験）' => 99,
+        ];
+
+        $attributes = [];
+        foreach ($numbers as $label => $number) {
+            $type = $row->get("授業実施形態{$label}");
+
+            $attributes[] = [
+                'number' => $number,
+                'content' => $row->get("内容{$label}"),
+                'type' => match ($type) {
+                    '[対]' => LessonType::IN_PERSON,
+                    '[録]' => LessonType::ON_DEMAND,
+                    '[ハ]' => LessonType::HIGH_FLEX,
+                    'その他' => LessonType::OTHER,
+                    default => throw new DomainException("Lesson type {$type} is not defined."),
+                },
+            ];
+        }
+
+        return $attributes;
+    }
+
+    private function getCourse(CsvRow $row, Collection $courses): Course
+    {
+        return $courses->where('name', '=', $row->get('コース名'))->firstOrFail();
     }
 }

@@ -5,149 +5,137 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Models\Model;
-use App\Models\SyllabusModel;
 use App\Models\Syllabus;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Services\CsvReader;
+use App\Services\CsvRow;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
-use SplFileObject;
+use Throwable;
 
 class SyllabusModelSeeder extends Seeder
 {
-    private array $header = [];
-
     /**
      * Run the database seeds.
      *
      * @return void
-     * @throws \Throwable When failed transactions.
+     * @throws Throwable When failed transactions.
      */
     public function run()
     {
+        $models = Model::all(['id', 'name']);
+        $syllabi = Syllabus::all(['id', 'name_ja']);
+
         $syllabusModels = [];
         $csvList = ['ia_models.csv', 'ct_models.csv', 'bd_models.csv'];
         foreach ($csvList as $csv) {
-            $syllabusModels = [...$syllabusModels, ...$this->readCsv("app/seeds/{$csv}")];
-            $this->setHeader([]);
+            $syllabusModels = [
+                ...$syllabusModels,
+                ...$this->readCsv("app/seeds/{$csv}", $models, $syllabi)
+            ];
         }
 
-        DB::transaction(
-            function () use ($syllabusModels) {
-                foreach ($syllabusModels as $record) {
-                    /** @var Syllabus $syllabus */
-                    $syllabus = Syllabus::whereNameJa($record['name'])
-                        ->orWhere('name_ja', str_replace(' ', '', $record['name']))
-                        ->first();
-
-                    if ($syllabus === null) {
-                        throw new ModelNotFoundException("Syllabus {$record['name']} is not found.");
-                    }
-
-                    $syllabusModels = array_map(
-                        fn(array $attributes): SyllabusModel => new SyllabusModel($attributes), $record['types']
-                    );
-                    $syllabus->modelPivot()->saveMany($syllabusModels);
-                }
+        DB::transaction(function () use ($syllabusModels): void {
+            foreach ($syllabusModels as $record) {
+                /** @var Syllabus $syllabus */
+                $syllabus = $record['syllabus'];
+                $syllabus->models()->sync($record['sync']);
             }
-        );
+        });
     }
 
-    private function readCsv(string $relativePath): array
+    /**
+     * @param string $relativePath
+     * @param Collection<Model> $models
+     * @param Collection<Syllabus> $syllabi
+     * @return array
+     */
+    private function readCsv(string $relativePath, Collection $models, Collection $syllabi): array
     {
-        $models = Model::pluck('id', 'name');
-
-        $syllabusModels = [];
+        $records = [];
 
         $path = storage_path($relativePath);
-        if (!file_exists($path)) {
-            echo("Cannot find seed file at '{$path}'");
-        }
 
-        $file = new SplFileObject($path);
-        while (!$file->eof()) {
-            $row = $file->fgetcsv();
+        $reader = new CsvReader($path);
+        $row = $reader->next();
+        while ($row !== null) {
+            $syllabus = $this->getSyllabus($row, $syllabi);
 
-            if ($row === false) {
-                throw new RuntimeException("Can not read row at line {$file->fgets()}");
-            }
-
-            if ($row === null || !isset($row[0])) {
+            if ($syllabus === null) {
+                $row = $reader->next();
                 continue;
             }
 
-            if ($this->hasHeader()) {
-                $this->setHeader($row);
-                continue;
-            }
+            $record = ['syllabus' => $syllabus];
 
-            $syllabusModel = [];
-            $name = '';
-            foreach ($row as $key => $column) {
-                $heading = $this->getHeading($key);
+            $row = $row->reject('科目')->reject('科目名');
 
-                if ($column === null || $column === '') {
+            foreach ($row as $heading => $value) {
+                if ($row->isEmpty($heading)) {
                     continue;
                 }
 
-                if (in_array($heading, ['科目名', '科目'], strict: true)) {
-                    $name = trim($column);
-                    continue;
-                }
+                $model = $this->getModel($heading, $models);
 
-                // 誤植修正
-                $heading = match ($heading) {
-                    'プロジェクトマネージャ' => 'プロジェクトマネージャー',
-                    'アントレプレナーモデル' => 'アントレプレナー',
-                    'イントラプレナーモデル' => 'イントラプレナー',
-                    '事業承継モデル' => '事業承継',
-                    default => $heading,
-                };
-
-                $modelId = $models[$heading] ?? null;
-                if ($modelId === null) {
-                    throw new ModelNotFoundException("Model {$heading} is not found.");
-                }
-
-                $syllabusModel['types'][] = [
-                    'model_id' => $modelId,
-                    'is_basic' => $column === '☆',
+                $record['sync'][$model->id] = [
+                    'is_basic' => $value === '☆',
                 ];
             }
 
-            // 誤植修正
-            $name = match ($name) {
-                'DESING[RE]THINKING', 'ESIGN [RE] THINKING' => 'DESIGN［RE］THINKING',
-                '事業方向性設計演習・' => '事業方向性設計演習',
-                'ビックデータ解析特論' => 'ビッグデータ解析特論',
-                'ET（Embedded Technology）特別演習' => 'ET(Embedded Technology)特別演習',
-                default => $name,
-            };
+            $records[] = $record;
 
-            // 科目としては存在しているようだが、シラバスの情報が存在しないためスキップする
-            if (in_array($name, ['IT・CIO 特論', '標準化と知財戦略', 'システムインテグレーション特論', 'サービス工学特論'], true)) {
-                continue;
-            }
-
-            $syllabusModel['name'] = $name;
-            $syllabusModels[] = $syllabusModel;
+            $row = $reader->next();
         }
 
-        return $syllabusModels;
+        return $records;
     }
 
-    private function hasHeader(): bool
+    /**
+     * @param CsvRow $row
+     * @param Collection<Syllabus> $syllabi
+     * @return Syllabus|null
+     */
+    private function getSyllabus(CsvRow $row, Collection $syllabi): ?Syllabus
     {
-        return count($this->header) === 0;
+        $name = $row->has('科目名') ? $row->get('科目名') : $row->get('科目');
+        $name = str_replace(' ', '', $name);
+
+        // 誤植修正
+        $name = match ($name) {
+            'DESING[RE]THINKING', 'ESIGN[RE]THINKING' => 'DESIGN［RE］THINKING',
+            '事業方向性設計演習・' => '事業方向性設計演習',
+            'ビックデータ解析特論' => 'ビッグデータ解析特論',
+            'ET（EmbeddedTechnology）特別演習' => 'ET(Embedded Technology)特別演習',
+            'TechnicalWritinginEnglish' => 'Technical Writing in English',
+            default => $name,
+        };
+
+        // 科目としては存在しているようだが、シラバスの情報が存在しないためスキップする
+        if (in_array($name, ['IT・CIO特論', '標準化と知財戦略', 'システムインテグレーション特論', 'サービス工学特論'], true)) {
+            return null;
+        }
+
+        return $syllabi
+            ->where('name_ja', $name)
+            ->firstOrFail();
     }
 
-    private function setHeader(array $header): void
+    /**
+     * @param string $heading
+     * @param Collection<Model> $models
+     * @return Model
+     */
+    private function getModel(string $heading, Collection $models): Model
     {
-        $this->header = $header;
-    }
+        // 誤植修正
+        $heading = match ($heading) {
+            'プロジェクトマネージャ' => 'プロジェクトマネージャー',
+            'アントレプレナーモデル' => 'アントレプレナー',
+            'イントラプレナーモデル' => 'イントラプレナー',
+            '事業承継モデル' => '事業承継',
+            default => $heading,
+        };
 
-    private function getHeading(int $key): string
-    {
-        return $this->header[$key];
+        return $models->where('name', $heading)->firstOrFail();
     }
 }
