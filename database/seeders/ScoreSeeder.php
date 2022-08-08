@@ -25,7 +25,7 @@ class ScoreSeeder extends Seeder
         $syllabi = Syllabus::all(['id', 'name_ja']);
 
         $scores = [];
-        $csvList = ['scores_2020_1.csv', 'scores_2020_2.csv', 'scores_2020_3.csv', 'scores_2020_4.csv'];
+        $csvList = ['scores_2021_1.csv', 'scores_2021_2.csv', 'scores_2021_3.csv', 'scores_2021_4.csv'];
         foreach ($csvList as $csv) {
             $scores = [...$scores, ...$this->readCsv("app/seeds/{$csv}", $syllabi)];
         }
@@ -102,16 +102,25 @@ class ScoreSeeder extends Seeder
 
         // 誤植修正
         $name = match ($name) {
-            '会計・ファインナンス工学特論' => '会計・ファイナンス工学特論',
-            'IT・CIO特論コース' => 'IT・CIO特論',
-            '統計・数理軽量ファインナンス特別演習' => '統計・数理計量ファイナンス特別演習',
             'DESIGN ［RE］ THINKING' => 'DESIGN［RE］THINKING',
             'ET（Embedded Technology）特別演習' => 'ET(Embedded Technology)特別演習',
             default => $name,
         };
 
         // 科目としては存在しているようだが、シラバスの情報が存在しないためスキップする
-        if (in_array($name, ['IT・CIO特論', '標準化と知財戦略', 'システムインテグレーション特論', 'サービス工学特論'], true)) {
+        if (in_array(
+            $name,
+            [
+                '標準化と知財戦略',
+                'IT・CIO特論',
+                'システムインテグレーション特論',
+                '事業設計工学特別演習２',
+                '情報システム学特別演習2',
+                'イノベーションデザイン特別演習2',
+                'サービス工学特論',
+            ],
+            true
+        )) {
             return null;
         }
 
